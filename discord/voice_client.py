@@ -639,9 +639,7 @@ class VoiceClient(VoiceProtocol):
         nonce[:4] = data[-4:]
         data = data[:-4]
 
-        return self.strip_header_ext(
-            box.decrypt(bytes(data), bytes(header), bytes(nonce))
-        )
+        return box.decrypt(bytes(data), bytes(header), bytes(nonce))
 
     @staticmethod
     def strip_header_ext(data):
