@@ -111,6 +111,13 @@ class Container(Item[V]):
                 row = ActionRow.with_components(item._underlying)
                 self._underlying.components.append(row)
 
+    def _insert_component_from_item(self, index: int, item: Item):
+        if item._underlying.is_v2():
+            self._underlying.components.insert(index, item._underlying)
+        else:
+            row = ActionRow.with_components(item._underlying)
+            self._underlying.components.insert(index, row)
+
     def _set_components(self, items: list[Item]):
         self._underlying.components.clear()
         for item in items:
@@ -139,6 +146,30 @@ class Container(Item[V]):
 
         self.items.append(item)
         self._add_component_from_item(item)
+        return self
+
+    def insert_item(self, row: int, item: Item) -> None:
+        """Inserts an item into the container before the given row.
+        Ignores the row attribute of the item.
+
+        Parameters
+        ----------
+        row: :class:`int`
+            The row to insert the item before. Supports negative indices.
+        item: :class:`Item`
+            The item to add to the container.
+
+        Raises
+        ------
+        TypeError
+            An :class:`Item` was not passed.
+        """
+
+        if not isinstance(item, Item):
+            raise TypeError(f"expected Item not {item.__class__!r}")
+
+        self.items.insert(row, item)
+        self._insert_component_from_item(row, item)
         return self
 
     def remove_item(self, item: Item | int) -> None:

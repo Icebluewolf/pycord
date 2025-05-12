@@ -127,8 +127,8 @@ class _ViewWeights:
         for index, weight in enumerate(self.weights):
             # check if open space AND (next row has no items OR this is the last row)
             if (weight + item.width <= 5) and (
-                (index < len(self.weights) - 1 and self.weights[index + 1] == 0)
-                or index == len(self.weights) - 1
+                    (index < len(self.weights) - 1 and self.weights[index + 1] == 0)
+                    or index == len(self.weights) - 1
             ):
                 return index
 
@@ -136,7 +136,7 @@ class _ViewWeights:
 
     def add_item(self, item: Item) -> None:
         if (
-            item._underlying.is_v2() or not self.fits_legacy(item)
+                item._underlying.is_v2() or not self.fits_legacy(item)
         ) and not self.requires_v2():
             self.weights.extend([0, 0, 0, 0, 0] * 7)
         if item.row is not None:
@@ -151,6 +151,46 @@ class _ViewWeights:
             index = self.find_open_space(item)
             self.weights[index] += item.width
             item._rendered_row = index
+
+    def insert_item(self, index: int, item: Item, leading_buttons: int) -> int:
+        if (
+                item._underlying.is_v2() or not self.fits_legacy(item)
+        ) and not self.requires_v2():
+            self.weights.extend([0, 0, 0, 0, 0] * 7)
+
+        item._rendered_row = index
+
+        # If there is space to insert it in the previous row
+        if index != 0 and self.weights[index - 1] + item.width <= 5:
+            self.weights[index - 1] += item.width
+            item._rendered_row -= 1
+            # Return -1 to indicate that no items need their rendered row modified
+            return -1
+        # If there is space to insert it in the row
+        if self.weights[index] + item.width <= 5 and item.width < 5:
+            self.weights[index] += item.width
+            # Return -1 to indicate that no items need their rendered row modified
+            return -1
+
+        # Remove the last empty row only if it is after the index
+        # Remove another row if a row needs to be split
+        to_remove = []
+        for n, weight in enumerate(reversed(self.weights[index:])):
+            if weight == 0:
+                to_remove.append(len(self.weights) - n - 1)
+                if leading_buttons == 0 or len(to_remove) == 2:
+                    break
+        else:
+            raise ValueError("There is no space to insert an item at this location")
+        for i in to_remove:
+            self.weights.pop(i)
+
+        self.weights.insert(index, item.width)
+        if leading_buttons != 0:
+            self.weights.insert(index, leading_buttons)
+            self.weights[index + 2] -= leading_buttons
+        # Return the number of items that do not need their rendered row increased, counting from the back
+        return n
 
     def remove_item(self, item: Item) -> None:
         if item._rendered_row is not None:
@@ -355,6 +395,60 @@ class View:
         if hasattr(item, "items"):
             item.view = self
         self.children.append(item)
+        return self
+
+    def insert_item(self, row: int, item: Item) -> None:
+        """Inserts an item into the view before the given row.
+        Ignores the row attribute of the item.
+
+        Parameters
+        ----------
+        row: :class:`int`
+            The row to insert the item before. Supports negative indices.
+        item: :class:`Item`
+            The item to add to the view.
+
+        Raises
+        ------
+        TypeError
+            An :class:`Item` was not passed.
+        ValueError
+            Maximum number of children has been exceeded (40).
+        """
+
+        if len(self.children) > 40:
+            raise ValueError("maximum number of children exceeded")
+
+        if not isinstance(item, Item):
+            raise TypeError(f"expected Item not {item.__class__!r}")
+
+        if row < 0:
+            row = len(self.children) + row
+
+        # Get the number of items that will be in the first action row if the action rows need to be split
+        left = 0
+        if item.width == 5 and self.children[row].width < 5:
+            for i in reversed(self.children[0:row]):
+                if i.width < 5:
+                    left += 1
+                else:
+                    break
+
+        count = self.__weights.insert_item(row, item, left)
+        if count >= 0:
+            for other_item in self.children[row:len(self.children) - count]:
+                if left != 0:
+                    # An action row is being split so and item needs to be inserted and the second part of the action
+                    # row must be moved over
+                    other_item._rendered_row += 2
+                else:
+                    other_item._rendered_row += 1
+
+        item._view = self
+        if hasattr(item, "items"):
+            item.view = self
+
+        self.children.insert(row, item)
         return self
 
     def remove_item(self, item: Item | int | str) -> None:

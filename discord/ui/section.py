@@ -75,6 +75,9 @@ class Section(Item[V]):
     def _add_component_from_item(self, item: Item):
         self._underlying.components.append(item._underlying)
 
+    def _insert_component_from_item(self, index: int, item: Item):
+        self._underlying.components.insert(index, item._underlying)
+
     def _set_components(self, items: list[Item]):
         self._underlying.components.clear()
         for item in items:
@@ -104,6 +107,35 @@ class Section(Item[V]):
 
         self.items.append(item)
         self._add_component_from_item(item)
+        return self
+
+    def insert_item(self, row: int, item: Item) -> None:
+        """Inserts an item into the section before the given row.
+        Ignores the row attribute of the item.
+
+        Parameters
+        ----------
+        row: :class:`int`
+            The row to insert the item before. Supports negative indices.
+        item: :class:`Item`
+            The item to add to the section.
+
+        Raises
+        ------
+        TypeError
+            An :class:`Item` was not passed.
+        ValueError
+            Maximum number of children has been exceeded (3).
+        """
+
+        if len(self.items) >= 3:
+            raise ValueError("maximum number of children exceeded")
+
+        if not isinstance(item, Item):
+            raise TypeError(f"expected Item not {item.__class__!r}")
+
+        self.items.insert(row, item)
+        self._insert_component_from_item(row, item)
         return self
 
     def remove_item(self, item: Item | int) -> None:
