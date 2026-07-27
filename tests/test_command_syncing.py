@@ -74,6 +74,7 @@ async def edit_needed(
     b = DummyBot()
     b.add_application_command(local)
     r = await b.get_desynced_commands(prefetched=[remote])
+    await b.close()
     return r[0]["action"] == "edit"
 
 
@@ -969,6 +970,7 @@ class TestSubCommandSyncing:
             b = DummyBot()
             b.add_application_command(local)
             r = await b.get_desynced_commands(prefetched=[remote])
+            await b.close()
             return r[0]["action"] == "upsert" and r[1]["action"] == "delete"
 
         s = SlashCommandGroup("subcommand")
@@ -1269,5 +1271,3 @@ class TestSubSubCommandSyncing:
             )
         )
         assert await edit_needed(s, rd)
-
-del pytestmark
