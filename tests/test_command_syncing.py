@@ -1269,3 +1269,5 @@ class TestSubSubCommandSyncing:
             )
         )
         assert await edit_needed(s, rd)
+
+del pytestmark
