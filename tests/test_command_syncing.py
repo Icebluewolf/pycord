@@ -10,7 +10,7 @@ from discord import MISSING, Bot, SlashCommandGroup
 from discord.bot import COMMAND_DEFAULTS, DefaultSetComparison
 from discord.types.interactions import ApplicationCommand, ApplicationCommandOption
 
-# pytestmark = pytest.mark.asyncio
+pytestmark = pytest.mark.asyncio
 
 
 class SlashCommand(discord.SlashCommand):
